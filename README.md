@@ -4,7 +4,7 @@ This repository contains scripts to quantify DSB foci using CellProfiler
 A script is provided to process the data using R (Studio)
 
 
-# CellProfiler
+### CellProfiler
 Provided pipelines can be imported in CellProfiler (https://cellprofiler.org/releases). The pipelines were used in CellProfiler 4.0.4 on Windows.
 
-# R
+### R
