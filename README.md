@@ -8,3 +8,4 @@ A script is provided to process the data using R (Studio)
 Provided pipelines can be imported in CellProfiler (https://cellprofiler.org/releases). The pipelines were used in CellProfiler 4.0.4 on Windows.
 
 ### R
+The script in R organizes the data and provides plots of the data.
