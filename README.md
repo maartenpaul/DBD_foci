@@ -9,3 +9,5 @@ Provided pipelines can be imported in CellProfiler (https://cellprofiler.org/rel
 
 ### R
 The script in R organizes the data and provides plots of the data.
+
+For questions please contact Maarten Paul (m.w.paul@erasmusmc.nl)
