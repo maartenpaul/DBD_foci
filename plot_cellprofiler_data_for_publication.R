@@ -1,6 +1,8 @@
+#import packages
 library(tidyverse)
 library(ggpol)
 library(plyr)
+#functions for ggplot plot layout adapted from: https://rpubs.com/Koundy/71792
 theme_Publication <- function(base_size=14, base_family="sans") {
   library(grid)
   library(ggthemes)
@@ -45,82 +47,78 @@ scale_colour_Publication <- function(...){
   
 }
 
+#Load all data with the features per nucleus
+read_csv("C:/Users/maart/Erasmus MC/source data/")
 
-
-#nuclei <- read_csv("C:/Dropbox/Postdoc Genetics/R51 data/MyExpt_EdUNuclei_Nuclei.csv")
-nuclei1 <- read_csv("D:/Dropbox/Postdoc Genetics/R51 data/DAPI_Foci_Nuclei.csv")
-nuclei1$experiment <- "exp1"
-nuclei2 <- read_csv("D:/OneDrive/Data2/MPexp1901_09 RAD51 foci/DAPI_Foci_Nuclei2.csv")
-nuclei2$experiment <- "exp2"
-nuclei3 <-  read_csv("D:/OneDrive/Data2/190527 ExpMP1905_05 RAD51 foci/DAPI_Foci_Nuclei.csv")
-nuclei3$experiment <- "exp3"
-
-
-nuclei <- rbind(nuclei1,nuclei2,nuclei3)
-RAD51_1 <- read_csv("D:/Dropbox/Postdoc Genetics/R51 data/DAPI_Foci_RAD51.csv")
-RAD51_2 <- read_csv("D:/OneDrive/Data2/MPexp1901_09 RAD51 foci/DAPI_Foci_RAD51.csv")
-RAD51_3 <- read_csv("D:/OneDrive/Data2/190527 ExpMP1905_05 RAD51 foci/DAPI_Foci_RAD51.csv")
-
-
-RAD51 <- rbind(RAD51_1,RAD51_2,RAD51_3)
-#View(RAD51)
-
-#nuclei <- mutate(nuclei,R51_positive=Children_RAD51_Count>20)
-
-#nuclei$Metadata_protein[nuclei$Metadata_protein=='dCTDdDBD'] <- 'dDBDdCTD'
-
-#plot(nuclei$Intensity_IntegratedIntensity_EdU,nuclei$Intensity_IntegratedIntensity_DAPI)
-
+#convert the different conditions into factors for optimal plotting results
 nuclei$Metadata_condition <- factor(nuclei$Metadata_condition,levels = c('noIR','2hIR','8hIR','24hIR'))
 nuclei$Metadata_protein <- factor(nuclei$Metadata_protein,levels = c('WT','dDBD','dCTD','dDBDdCTD'))
-
 nuclei$condition <- mapvalues(nuclei$Metadata_condition, from = c('noIR','2hIR','8hIR','24hIR'),to = c('no IR','2h','8h','24h'))
-  
 
-group_by(nuclei,Metadata_condition,Metadata_protein) %>%
-  summarise(mean=mean(Children_RAD51_Count))
+#Number of nuclei per protein
+filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
+  count(vars = c("Metadata_protein"))
 
-data <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  select(Protein=Metadata_protein,Condition=condition,RAD51_Count=Children_RAD51_Count,Mean_RAD51_Intensity=Mean_RAD51_Intensity_IntegratedIntensity_MaskedGreen)%>%
-  mutate("Protein_Condition"=paste0(Protein,"_",Condition))%>%
-  write_csv("data.csv")
+#Number of EdU positive cells
+nuclei$Edu_pos <- nuclei$Intensity_IntegratedIntensity_EdU>500
+table(nuclei$Edu_pos,nuclei$Metadata_protein,nuclei$Metadata_condition)
 
-
-#Foci frequencies
-plot <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  ggplot(aes(y=Children_RAD51_Count,x=condition,fill=Metadata_protein))+
-  geom_boxjitter(errorbar.draw = TRUE,jitter.height = 0, jitter.width = 0.1,notch=TRUE,jitter.alpha=0.8,jitter.size=0.8,outlier.intersect=TRUE)+
-  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Number of RAD51 foci/nucleus")+
-  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))
-plot
-
-
-plotbox <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
+#Box-plot of foci numbers per nucleus plotted per timepoint
+plot1 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
   ggplot(aes(y=Children_RAD51_Count,x=condition,fill=Metadata_protein))+
   geom_boxplot(notch=TRUE)+
   facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Number of RAD51 foci/nucleus")+
-  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))+stat_summary(fun.y=mean, colour="white", geom="point", 
-                                                                                                                                       shape=1, size=2,show_guide = FALSE)
-plotbox
+  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))+stat_summary(fun.y=mean, colour="white", geom="point", shape=1, size=2,show_guide = FALSE)
+plot1
+ggsave(plot1,filename = "RAD51 foci frequencies_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
 
-plotbox <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
+
+#Box-plot of foci numbers per nucleus plotted per genotype
+plot1 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
   ggplot(aes(y=Children_RAD51_Count,x=Metadata_protein,fill=Metadata_protein))+
   geom_boxplot(notch=TRUE)+
   facet_grid(.~condition)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Number of RAD51 foci/nucleus")+
-  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),plot.title = element_text(size=14))+stat_summary(fun.y=mean, colour="white", geom="point", 
-                                                                                                                                       shape=1, size=2,show_guide = FALSE)
-plotbox
+  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),plot.title = element_text(size=14))+stat_summary(fun.y=mean, colour="white", geom="point",shape=1, size=2,show_guide = FALSE)
+plot1
 
-
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
+#bar plot with mean and SD per condition
+plot2 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
   group_by(Metadata_protein,condition)%>%
   dplyr::summarise(mean_foci=mean(Children_RAD51_Count),sd_foci=sd(Children_RAD51_Count)) %>%
   mutate(prot_condition=paste(Metadata_protein,condition)) %>%
-  ggplot(aes(y=mean_foci,x=prot_condition))+geom_bar(stat="identity",position=position_dodge())+
+  ggplot(aes(y=mean_foci,x=prot_condition,fill=Metadata_protein))+geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=mean_foci-sd_foci, ymax=mean_foci+sd_foci), width=.2,
-                position=position_dodge(.9)) 
+                position=position_dodge(.9)) + scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+xlab("")+ylab("Number of RAD51 foci/nucleus")+theme(legend.position = "none")
+plot2
 
-#compare timepoints
+#Plotting fraction of RAD51 positive cells with arbitrary cut-off
+nuclei %>%
+  filter(Intensity_IntegratedIntensity_EdU>500,) %>%
+  dplyr::mutate(R51_positive=Children_RAD51_Count>25) %>%
+  group_by(Metadata_condition,Metadata_protein,R51_positive) %>%
+  dplyr::summarise(n=n())%>%
+  dplyr::mutate(freq = n / sum(n)) %>%
+  filter(R51_positive==TRUE) %>%
+  ggplot(aes(y=freq,x=Metadata_condition,fill=Metadata_protein))+geom_bar(stat="identity")+
+  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+
+  theme(legend.position = "none",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+xlab("")+ggtitle("cells > 25 foci")
+
+nuclei %>%
+  filter(Intensity_IntegratedIntensity_EdU>500) %>%
+  dplyr::mutate(R51_positive=Children_RAD51_Count>30) %>%
+  group_by(Metadata_condition,Metadata_protein,experiment,R51_positive) %>%
+  dplyr::summarise(n=n())%>%
+  dplyr::mutate(freq = n / sum(n)) %>%
+  filter(R51_positive==TRUE) %>%
+  group_by(Metadata_condition,Metadata_protein)%>%
+  dplyr::summarise(mean=mean(freq),sd=sd(freq)/sqrt(n()))%>%
+  ggplot(aes(y=mean,x=Metadata_condition,fill=Metadata_protein))+geom_bar(stat="identity")+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd))+
+  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+
+  theme(legend.position = "none",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+xlab("")+ggtitle("cells > 25 foci")
+
+#statistics comparing timepoints
 statistical_data <- matrix(nrow = 4,ncol=4)
 proteins <- c("no IR","2h","8h","24h")
 for (i in 1:4){
@@ -133,7 +131,7 @@ for (i in 1:4){
    
 View(statistical_data)
 
-#compare variants
+#statistics compare variants
 statistical_data <- matrix(nrow = 4,ncol=4)
 proteins <- c("WT","dDBD","dCTD","dDBDdCTD")
 for (i in 1:4){
@@ -146,112 +144,38 @@ for (i in 1:4){
 
 View(statistical_data)
 
-group_a <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500,Metadata_protein=="WT",condition=="no IR")
 
 
-group_b <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500,Metadata_protein=="WT",condition=="2h")
-
-t.test(group_a$Children_RAD51_Count,group_b$Children_RAD51_Count)
-  
-  
-  ggplot(aes(y=Children_RAD51_Count,x=condition,fill=Metadata_protein))+
-  geom_boxplot(notch=TRUE)+
-  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Number of RAD51 foci/nucleus")+
-  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))+stat_summary(fun.y=mean, colour="white", geom="point", 
-                                                                                                                                       shape=1, size=2,show_guide = FALSE)
-plotbox
-
-ggsave(plotbox,filename = "RAD51 foci frequencies_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
-
-#statistcs
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  count(vars = c("Metadata_protein"))
-
-#EdU positive
-nuclei$Edu_pos <- nuclei$Intensity_IntegratedIntensity_EdU>500
-
-table(nuclei$Edu_pos,nuclei$Metadata_protein,nuclei$Metadata_condition)
-
-
-#Foci 
-nuclei %>%
-filter(Intensity_IntegratedIntensity_EdU>500,) %>%
-  dplyr::mutate(R51_positive=Children_RAD51_Count>25) %>%
-  group_by(Metadata_condition,Metadata_protein,R51_positive) %>%
-  dplyr::summarise(n=n())%>%
-  dplyr::mutate(freq = n / sum(n)) %>%
-  filter(R51_positive==TRUE) %>%
-  ggplot(aes(y=freq,x=Metadata_condition,fill=Metadata_protein))+geom_bar(stat="identity")+
-  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+
-  theme(legend.position = "none",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+xlab("")+ggtitle("cells > 25 foci")
-
-nuclei <- mutate(nuclei,Parent_Nuclei=ObjectNumber)
-
-  nuclei_R51 <- left_join(x=nuclei,y=RAD51,by=c("Parent_Nuclei","ImageNumber","Metadata_FileLocation")) %>%
+#join the nuclei and RAD51 foci tables to plot the integrated intensity per focus
+nuclei_R51 <- mutate(nuclei,Parent_Nuclei=ObjectNumber) %>%
+    left_join(y=RAD51,by=c("Parent_Nuclei","ImageNumber","Metadata_FileLocation")) %>%
     filter(Intensity_IntegratedIntensity_EdU>500)
   
   
-  plot_foci <- ggplot(nuclei_R51,aes(y=Intensity_IntegratedIntensity_MaskedGreen,x=Metadata_condition.x,fill=Metadata_protein.x))+
+  plot3 <- ggplot(nuclei_R51,aes(y=Intensity_IntegratedIntensity_MaskedGreen,x=Metadata_condition.x,fill=Metadata_protein.x))+
     geom_boxplot(notch = T,outlier.shape = NA)+ facet_grid(.~Metadata_protein.x)+
     scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Integrated intensity/focus")+ylim(0,20)+
     theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))
-  plot_foci
-  ggsave(plot_foci,filename = "RAD51 foci individual intensity_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
+  plot3
+  ggsave(plot3,filename = "RAD51 foci individual intensity_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
   
 
-    left_join(x=RAD51,y=nuclei,by=c("Parent_Nuclei","ImageNumber")) %>%
-    filter(x$Intensity_IntegratedIntensity_EdU>500)%>%
-    ggplot(aes(y=Intensity_IntegratedIntensity_MaskedGreen,x=Metadata_condition.y,fill=Metadata_protein.y))+
-    geom_boxplot()+ facet_grid(.~Metadata_protein.y)+ 
-    scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+ylab("Integrated intensity/focus")+
-    theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))
-  
-  
-  #Distance from centroid
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  ggplot(aes(y=Mean_RAD51_Distance_Centroid_Nuclei,x=Metadata_condition))+geom_boxplot()+facet_grid(.~Metadata_protein)
-
-#Mean RAD51 integrated density
-plot2 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  ggplot(aes(y=Mean_RAD51_Intensity_MeanIntensity_MaskedGreen,x=Metadata_condition,fill=Metadata_protein))+geom_boxjitter(errorbar.draw = TRUE,jitter.height = 0, jitter.width = 0.1,notch=TRUE,jitter.alpha=0.8,jitter.size=0.8,outlier.intersect=TRUE)+
-  facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+
-  ylab("Mean RAD51 focus intensity/nucleus")
-  theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))
-plot2
-ggsave(plot2,filename = "RAD51 foci intensity.pdf",width = 10, units="in", height=6,useDingbats=F)
-
-plot3 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
+#Plot mean RAD51 integrated density
+plot4 <- filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
   ggplot(aes(y=Mean_RAD51_Intensity_IntegratedIntensity_MaskedGreen,x=Metadata_condition,fill=Metadata_protein))+geom_boxplot(notch=TRUE)+
   facet_grid(.~Metadata_protein)+ scale_colour_Publication()+scale_fill_Publication()+theme_Publication(base_size=16)+
   ylab("Mean RAD51 focus intensity/nucleus")+xlab("")+
   theme(legend.position = "none")+ggtitle("BRCA2-HaloTag RAD51 foci IR (2Gy)")+ theme(plot.title = element_text(size=14))
-plot3
-ggsave(plot3,filename = "RAD51 foci intensity_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
+plot4
+ggsave(plot4,filename = "RAD51 foci intensity_boxplot.pdf",width = 10, units="in", height=6,useDingbats=F)
 
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  ggplot(aes(y=Mean_RAD51_AreaShape_Area,x=Metadata_condition))+geom_boxplot()+facet_grid(.~Metadata_protein)
-
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500) %>%
-  ggplot(aes(y=Mean_RAD51_AreaShape_Eccentricity,x=Metadata_condition))+geom_boxplot()+facet_grid(.~Metadata_protein)
-
-filter(nuclei,Intensity_IntegratedIntensity_EdU>500)
-
-
-######
-nuclei1 <- subset(nuclei,Metadata_protein=="dDBDdCTD"&Metadata_condition=="24hIR")
-
-plot(log(nuclei1$Intensity_IntegratedIntensity_DAPI),log(nuclei1$Intensity_MeanIntensity_EdU),xlim=c(6,9))
-
-nuclei$Intensity_IntegratedIntensity_DAPI)
-
-#fold plot
+#plot number of foci averaged per experimental replicate
 mean_foci <- nuclei%>%
   filter(Intensity_IntegratedIntensity_EdU>500) %>%
   group_by(experiment,Metadata_protein,condition) %>%
   dplyr::summarize(RAD51_foci=mean(Children_RAD51_Count)) %>%
   group_by(Metadata_protein,condition) %>%
   dplyr::summarize(mean_foci=mean(RAD51_foci),sd_foci=sd(RAD51_foci),n=n())
-write_clip(mean_foci)
 #View(mean_foci)
 mean_foci %>%
   ggplot(aes(y=mean_foci,x=condition)) + geom_bar(stat="identity",position=position_dodge()) +
@@ -261,7 +185,7 @@ mean_foci %>%
   scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+
   theme(legend.position = "none")
 
-
+#fold plots
 x <- nuclei%>%
   filter(Intensity_IntegratedIntensity_EdU>500) %>%
   group_by(experiment,Metadata_protein,condition) %>%
@@ -269,11 +193,10 @@ x <- nuclei%>%
   group_by(Metadata_protein,experiment) %>%
   dplyr::mutate(fold=RAD51_foci/dplyr::first(RAD51_foci)) %>%
   group_by(Metadata_protein,condition) %>%
-  dplyr::summarize(mean_fold=mean(fold),sd_fold=sd(fold),n=n())
+  dplyr::summarize(mean_fold=mean(fold),sd_fold=sd(fold)/sqrt(n()),n=n())
 
 library(clipr)
-write_clip(x)
-%>%
+x %>%
 ggplot(aes(x=condition,y=mean_fold,group=Metadata_protein,color=Metadata_protein))+
   geom_point()+geom_line()+geom_errorbar(aes(ymin=mean_fold-sd_fold, ymax=mean_fold+sd_fold))+
   facet_grid(.~Metadata_protein)+ scale_colour_Publication()+
@@ -284,13 +207,19 @@ ggplot(aes(x=condition,y=mean_fold,group=Metadata_protein,color=Metadata_protein
 x <- nuclei %>%
   group_by(experiment,Metadata_protein,condition) %>%
   dplyr::mutate(EdUpos = Intensity_IntegratedIntensity_EdU>500) %>%
-  dplyr::summarize(EdU = sum(EdUpos==TRUE)/n())%>%
-  group_by(Metadata_protein,condition) %>%
+  dplyr::summarize(EdU = (sum(EdUpos==TRUE)/n()))%>%
+  group_by(Metadata_protein,condition)
+
+#fraction of cells in S-phase
+x %>%  
   dplyr::summarize(mean_EdU=mean(EdU),sd_EdU=sd(EdU),n=n()) %>%
-  ggplot(aes(y=mean_EdU,x=Metadata_protein)) + geom_bar(stat="identity",position=position_dodge()) +
+  ggplot(aes(y=mean_EdU,x=condition,fill=Metadata_protein)) + geom_bar(stat="identity",position=position_dodge()) +
   geom_errorbar(aes(ymin=mean_EdU-sd_EdU, ymax=mean_EdU+sd_EdU), width=.2,
-                position=position_dodge(.9)) +facet_wrap(.~condition)+
-  scale_colour_Publication()+ylab("average fraction of EdU+ cells")+ylim(0,1)+
+                position=position_dodge(.9)) +facet_wrap(.~Metadata_protein,nrow = 1)+
+  geom_point(data=x, aes(y=EdU, x=condition))+
+  scale_colour_Publication()+ylab("% cells in S-phase")+ylim(0,1)+
   scale_fill_Publication()+theme_Publication(base_size=16)+xlab("")+
   theme(legend.position = "none")
-x
+
+
+
