@@ -48,7 +48,7 @@ scale_colour_Publication <- function(...){
 }
 
 #Load all data with the features per nucleus
-read_csv("C:/Users/maart/Erasmus MC/source data/")
+read_csv("/source data/")
 
 #convert the different conditions into factors for optimal plotting results
 nuclei$Metadata_condition <- factor(nuclei$Metadata_condition,levels = c('noIR','2hIR','8hIR','24hIR'))
